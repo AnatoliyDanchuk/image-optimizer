@@ -1,0 +1,70 @@
+{
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "replace": {
+        "symfony/polyfill-php73": "*",
+        "symfony/polyfill-php74": "*",
+        "symfony/polyfill-php80": "*",
+        "symfony/polyfill-php81": "*",
+        "symfony/polyfill-ctype": "*",
+        "symfony/polyfill-iconv": "*",
+        "symfony/polyfill-mbstring": "*",
+        "symfony/polyfill-intl-normalizer": "*",
+        "symfony/polyfill-intl-grapheme": "*"
+    },
+    "require": {
+        "php": ">=8.1.10",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "ext-intl": "*",
+        "ext-mbstring": "*",
+        "ext-oauth": "*",
+        "aws/aws-sdk-php": "*",
+        "symfony/console": "*",
+        "symfony/expression-language": "*",
+        "symfony/framework-bundle": "*",
+        "symfony/intl": "*",
+        "symfony/proxy-manager-bridge": "*",
+        "symfony/validator": "*",
+        "symfony/yaml": "*"
+    },
+    "require-dev": {
+        "amnuts/opcache-gui": "3.2.1",
+        "liuggio/fastest": "^1.8",
+        "phpunit/phpcov": "^8.2",
+        "phpunit/phpunit": "^9.5",
+        "symfony/test-pack": "^1.0"
+    },
+    "config": {
+        "process-timeout": 0,
+        "vendor-dir": "../../../var/vendor",
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "Framework\\": "../../../Framework/",
+            "Domain\\": "../../../Domain/",
+            "DomainAdapter\\": "../../../DomainAdapter/",
+            "Api\\": "../../../Api/"
+        }
+    },
+    "scripts": {
+        "compile-Symfony": "php ../../entrypoint/handleConsoleCommand.php cache:clear",
+        "clear-Symfony-cache": [
+            "php ../../entrypoint/handleConsoleCommand.php cache:clear --no-warmup",
+            "@hard-remove-Symfony-cache-of-each-env"
+        ],
+        "hard-remove-Symfony-cache-of-each-env": "rm -r ../../../var/cache/*",
+        "post-install-cmd": [
+            "@compile-Symfony"
+        ],
+        "post-update-cmd": [
+            "@compile-Symfony"
+        ]
+    }
+}

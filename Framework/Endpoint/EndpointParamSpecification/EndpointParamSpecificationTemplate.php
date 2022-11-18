@@ -33,4 +33,13 @@ abstract class EndpointParamSpecificationTemplate
     abstract protected function getParamConstraints(): array;
 
     abstract public function parseValue(string $value);
+
+    /**
+     * Used for search unique route params.
+     * @see HttpEndpointLoader::fixRoutesWithSamePath()
+     */
+    final public function __toString(): string
+    {
+        return get_class($this);
+    }
 }

@@ -3,6 +3,9 @@
 namespace Framework\Config\Routes;
 
 use FilesystemIterator;
+use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
+use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
+use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Framework\Endpoint\EndpointTemplate\ApplicationHttpEndpointTemplate;
 use Framework\Endpoint\EndpointTemplate\HttpEndpointTemplate;
 use Framework\Endpoint\JsonRequestTransformer;
@@ -108,20 +111,25 @@ final class HttpEndpointLoader extends FileLoader
     private function fixRoutesWithSamePath(RouteCollection $routes): void
     {
         foreach ($this->getNamesOfRoutesBySamePath($routes) as $path => $namesOfRoutes) {
-            $namesOfExpectedParamsByRouteName = $this->indexNamesOfExpectedParamsByRouteName($namesOfRoutes, $routes);
+            $expectedParamsByRouteName = $this->indexExpectedParamsByRouteName($namesOfRoutes, $routes);
 
             $routeNamesWithoutUniqueParams = [];
-            foreach ($namesOfExpectedParamsByRouteName as $currentRouteName => $currentRouteParams) {
-                $paramsOfOtherRoutes = array_diff_key($namesOfExpectedParamsByRouteName, [$currentRouteName => null]);
-                $namesOfUniqueParams = array_diff($currentRouteParams, ...array_values($paramsOfOtherRoutes));
+            foreach ($expectedParamsByRouteName as $routeName => $expectedParams) {
+                $expectedParamsOfOtherRoutes = array_diff_key($expectedParamsByRouteName, [$routeName => null]);
+                /**
+                 * array_diff does not compare objects as "===" or "==",
+                 * array_diff compare objects like (string)Object1 == (string)Object2
+                 * @uses \Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate::__toString()
+                 */
+                $uniqueExpectedParams = array_diff($expectedParams, ...array_values($expectedParamsOfOtherRoutes));
 
-                if (!empty($namesOfUniqueParams)) {
-                    $condition = $this->buildRouteCondition($namesOfUniqueParams);
+                if (!empty($uniqueExpectedParams)) {
+                    $condition = $this->buildRouteCondition($uniqueExpectedParams);
                     /** @var Route $route */
-                    $route = $routes->get($currentRouteName);
+                    $route = $routes->get($routeName);
                     $route->setCondition($condition);
                 } else {
-                    $routeNamesWithoutUniqueParams[] = $currentRouteName;
+                    $routeNamesWithoutUniqueParams[] = $routeName;
                 }
             }
 
@@ -152,26 +160,33 @@ final class HttpEndpointLoader extends FileLoader
         return array_filter($routesByPath, 'is_array');
     }
 
-    private function indexNamesOfExpectedParamsByRouteName(array $namesOfRoutes, RouteCollection $routes): array
+    /**
+     * @return EndpointParamSpecificationTemplate[][]
+     */
+    private function indexExpectedParamsByRouteName(array $namesOfRoutes, RouteCollection $routes): array
     {
-        $namesOfExpectedParamsByRouteName = [];
+        $expectedParamsByRouteName = [];
         foreach ($namesOfRoutes as $routeName) {
             /** @var Route $route */
             $route = $routes->get($routeName);
             $endpointClass = $route->getDefault('_controller')[0];
             /** @var ApplicationHttpEndpointTemplate $endpoint */
             $endpoint = $this->serviceProvider->get($endpointClass);
-            $namesOfExpectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getNamesOfAllParams();
+            $expectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getEndpointParams();
         }
-        return $namesOfExpectedParamsByRouteName;
+        return $expectedParamsByRouteName;
     }
 
-    private function buildRouteCondition(array $namesOfParams): string
+    private function buildRouteCondition(array $params): string
     {
         $conditionChecks = [];
-        foreach ($namesOfParams as $paramName) {
-            //$conditionChecks[] = "request.query.has('$paramName')";
-            $conditionChecks[] = "request.attributes.get('".JsonRequestTransformer::REQUEST_ATTRIBUTE_JSON_CONTENT."')?.".str_replace(':{',"?.", $paramName) . " !== null";
+        foreach ($params as $param) {
+            if ($param instanceof InHttpUrlQueryAllowed) {
+                $conditionChecks[] = "request.query.has('" . $param->getUrlQueryParamName() . "')";
+            }
+            if ($param instanceof InJsonHttpBodyAllowed) {
+                $conditionChecks[] = "request.attributes.get('".JsonRequestTransformer::REQUEST_ATTRIBUTE_JSON_CONTENT."')?.". implode('?.', $param->getJsonItemPath()) . " !== null";
+            }
         }
 
         return implode(" || ", $conditionChecks);

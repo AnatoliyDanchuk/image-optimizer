@@ -110,8 +110,8 @@ final class HttpEndpointLoader extends FileLoader
 
     private function fixRoutesWithSamePath(RouteCollection $routes): void
     {
-        foreach ($this->getNamesOfRoutesBySamePath($routes) as $path => $namesOfRoutes) {
-            $expectedParamsByRouteName = $this->indexExpectedParamsByRouteName($namesOfRoutes, $routes);
+        foreach ($this->getRouteCollectionsBySamePath($routes) as $path => $routeCollectionWithSamePath) {
+            $expectedParamsByRouteName = $this->indexExpectedParamsByRoutePath($routeCollectionWithSamePath);
 
             $routeNamesWithoutUniqueParams = [];
             foreach ($expectedParamsByRouteName as $routeName => $expectedParams) {
@@ -149,32 +149,33 @@ final class HttpEndpointLoader extends FileLoader
         }
     }
 
-    private function getNamesOfRoutesBySamePath(RouteCollection $routes): array
+    /**
+     * @return RouteCollection[]
+     */
+    private function getRouteCollectionsBySamePath(RouteCollection $routes): array
     {
-        $routesByPath = [];
-        foreach ($routes->all() as $routeName => $route) {
-            $routesByPath = array_merge_recursive($routesByPath, [
-                $route->getPath() => $routeName,
-            ]);
+        $routeCollectionsByPath = [];
+        foreach ($routes->all() as $route) {
+            ($routeCollectionsByPath[$route->getPath()] ??= new RouteCollection())->add($route->getPath(), $route);
         }
-        return array_filter($routesByPath, 'is_array');
+        return array_filter($routeCollectionsByPath, static function (RouteCollection $routeCollection) {
+            return $routeCollection->count() > 1;
+        });
     }
 
     /**
      * @return EndpointParamSpecificationTemplate[][]
      */
-    private function indexExpectedParamsByRouteName(array $namesOfRoutes, RouteCollection $routes): array
+    private function indexExpectedParamsByRoutePath(RouteCollection $routeCollection): array
     {
-        $expectedParamsByRouteName = [];
-        foreach ($namesOfRoutes as $routeName) {
-            /** @var Route $route */
-            $route = $routes->get($routeName);
+        $expectedParamsByRoutePath = [];
+        foreach ($routeCollection as $routePath => $route) {
             $endpointClass = $route->getDefault('_controller')[0];
             /** @var ApplicationHttpEndpointTemplate $endpoint */
             $endpoint = $this->serviceProvider->get($endpointClass);
-            $expectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getEndpointParams();
+            $expectedParamsByRoutePath[$routePath] = $endpoint->getExpectedInput()->getEndpointParams();
         }
-        return $expectedParamsByRouteName;
+        return $expectedParamsByRoutePath;
     }
 
     private function buildRouteCondition(array $params): string

@@ -60,9 +60,8 @@ RUN pecl install oauth && echo "extension=oauth.so" >> /usr/local/etc/php/conf.d
 # For developers
 RUN pecl install xdebug && echo "zend_extension=xdebug.so" >> /usr/local/etc/php/conf.d/extensions.ini
 
-## because error:
-## PHP Warning:  PHP Startup: Unable to load dynamic library 'sodium'
-#RUN apk add --no-cache libsodium-dev && pecl install libsodium && echo "extension=sodium.so" >> /usr/local/etc/php/conf.d/extensions.ini
+# for work with images
+RUN apk add --no-cache imagemagick imagemagick-dev && pecl install imagick && echo "extension=imagick.so" >> /usr/local/etc/php/conf.d/extensions.ini
 
 # for command: composer install
 RUN apk add --no-cache unzip

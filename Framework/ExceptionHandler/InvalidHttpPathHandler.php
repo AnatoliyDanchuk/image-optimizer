@@ -9,6 +9,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 
 final class InvalidHttpPathHandler implements ExceptionHandlerInterface
@@ -41,8 +42,8 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
         }
         /** @var NotFoundHttpException $exception */
 
-        $matchedRoutesByPath = $this->getMatchedRoutesByPath($event);
-        if (!empty($matchedRoutesByPath)) {
+        $matchedRouteCollectionByPath = $this->getMatchedRouteCollectionByPath($event);
+        if ($matchedRouteCollectionByPath->count() > 2) {
             $documentation = '';
             $errorDetails = [
                 'reason' => 'Request has not enough signature for binding it to one of found routes.',
@@ -50,7 +51,7 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
                 'expectation' => 'Add at least one of unique params to request'
                     . ' for binding request to expected route.',
                 'router' => [
-                    'foundRelatedRoutes' => $this->buildFoundRelatedRoutes($matchedRoutesByPath),
+                    'foundRelatedRoutes' => $this->buildFoundRelatedRoutes($matchedRouteCollectionByPath),
                     'violation' => $exception->getMessage(),
                 ],
             ];
@@ -67,21 +68,21 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
         $event->setResponse($response);
     }
 
-    private function getMatchedRoutesByPath(ExceptionEvent $event): array
+    private function getMatchedRouteCollectionByPath(ExceptionEvent $event): RouteCollection
     {
-        $matchedRoutesByPath = [];
+        $matchedRouteCollectionByPath = new RouteCollection();
         $requestPath = $event->getRequest()->getPathInfo();
         foreach ($this->router->getRouteCollection() as $routeName => $route) {
             if ($route->getPath() === $requestPath) {
-                $matchedRoutesByPath[$routeName] = $route;
+                $matchedRouteCollectionByPath->add($routeName, $route);
             }
         }
-        return $matchedRoutesByPath;
+        return $matchedRouteCollectionByPath;
     }
 
-    private function buildFoundRelatedRoutes(array $matchedRoutesByPath): array
+    private function buildFoundRelatedRoutes(RouteCollection $matchedRouteCollectionByPath): array
     {
-        $namesOfExpectedParamsByRouteName = $this->getNamesOfExpectedParamsByRouteName($matchedRoutesByPath);
+        $namesOfExpectedParamsByRouteName = $this->getNamesOfExpectedParamsByRouteName($matchedRouteCollectionByPath);
         $namesOfUniqueParamsByRouteName = $this->getNamesOfUniqueParamsByRouteName($namesOfExpectedParamsByRouteName);
 
         // Simplify of matching expected routes in tests.
@@ -96,10 +97,10 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
         return $foundRelatedRoutes;
     }
 
-    private function getNamesOfExpectedParamsByRouteName(array $matchedRoutesByPath): array
+    private function getNamesOfExpectedParamsByRouteName(RouteCollection $routeCollection): array
     {
         $namesOfExpectedParamsByRouteName = [];
-        foreach ($matchedRoutesByPath as $routeName => $route) {
+        foreach ($routeCollection as $routeName => $route) {
             $endpointClass = $route->getDefault('_controller')[0];
             /** @var ApplicationHttpEndpointTemplate $endpoint */
             $endpoint = $this->serviceProvider->get($endpointClass);

@@ -5,11 +5,13 @@ namespace Framework\Config\Routes;
 use FilesystemIterator;
 use Framework\Endpoint\EndpointTemplate\ApplicationHttpEndpointTemplate;
 use Framework\Endpoint\EndpointTemplate\HttpEndpointTemplate;
+use Framework\Endpoint\JsonRequestTransformer;
 use LogicException;
 use ReflectionClass;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Config\FileLocator;
 use Symfony\Component\Config\Loader\FileLoader;
+use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 final class HttpEndpointLoader extends FileLoader
@@ -115,6 +117,7 @@ final class HttpEndpointLoader extends FileLoader
 
                 if (!empty($namesOfUniqueParams)) {
                     $condition = $this->buildRouteCondition($namesOfUniqueParams);
+                    /** @var Route $route */
                     $route = $routes->get($currentRouteName);
                     $route->setCondition($condition);
                 } else {
@@ -153,7 +156,9 @@ final class HttpEndpointLoader extends FileLoader
     {
         $namesOfExpectedParamsByRouteName = [];
         foreach ($namesOfRoutes as $routeName) {
-            $endpointClass = $routes->get($routeName)->getDefault('_controller')[0];
+            /** @var Route $route */
+            $route = $routes->get($routeName);
+            $endpointClass = $route->getDefault('_controller')[0];
             /** @var ApplicationHttpEndpointTemplate $endpoint */
             $endpoint = $this->serviceProvider->get($endpointClass);
             $namesOfExpectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getNamesOfAllParams();
@@ -165,7 +170,8 @@ final class HttpEndpointLoader extends FileLoader
     {
         $conditionChecks = [];
         foreach ($namesOfParams as $paramName) {
-            $conditionChecks[] = "request.query.has('$paramName')";
+            //$conditionChecks[] = "request.query.has('$paramName')";
+            $conditionChecks[] = "request.attributes.get('".JsonRequestTransformer::REQUEST_ATTRIBUTE_JSON_CONTENT."')?.".str_replace(':{',"?.", $paramName) . " !== null";
         }
 
         return implode(" || ", $conditionChecks);

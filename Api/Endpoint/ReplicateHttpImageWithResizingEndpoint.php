@@ -3,7 +3,7 @@
 namespace Api\Endpoint;
 
 use Api\EndpointParamSpecification\WantedImagePathSpecification;
-use Api\EndpointServiceFactory\OriginalImageS3PathProviderFactory;
+use Api\EndpointServiceFactory\OriginalImageHttpPathProviderFactory;
 use Api\EndpointServiceFactory\S3ClientFactory;
 use Api\CombinedEndpointParamSpecification\WantedImageGeometrySpecification;
 use Api\EndpointSpecification\ReplicateImageWithResizingSpecification;
@@ -20,7 +20,7 @@ final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithRes
         private readonly WantedImageGeometrySpecification $wantedImageGeometrySpecification,
 
         private readonly S3ClientFactory $s3ClientFactory,
-        private readonly OriginalImageS3PathProviderFactory $originalImageS3PathProviderFactory,
+        private readonly OriginalImageHttpPathProviderFactory $originalImagePathProviderFactory,
 
         private readonly ReplicateImageWithResizing $action,
         private readonly OriginalImageHttpProvider $originalImageProvider,
@@ -40,7 +40,7 @@ final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithRes
     {
         return new EndpointServiceFactoryCollection(
             $this->s3ClientFactory,
-            $this->originalImageS3PathProviderFactory,
+            $this->originalImagePathProviderFactory,
         );
     }
 

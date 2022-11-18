@@ -20,7 +20,7 @@ final class ReplicateS3ImageWithResizingEndpoint extends ReplicateImageWithResiz
         private readonly WantedImageGeometrySpecification $wantedImageGeometrySpecification,
 
         private readonly S3ClientFactory $s3ClientFactory,
-        private readonly OriginalImageS3PathProviderFactory $originalImageS3PathProviderFactory,
+        private readonly OriginalImageS3PathProviderFactory $originalImagePathProviderFactory,
 
         private readonly ReplicateImageWithResizing $action,
         private readonly OriginalImageS3Provider $originalImageProvider,
@@ -40,7 +40,7 @@ final class ReplicateS3ImageWithResizingEndpoint extends ReplicateImageWithResiz
     {
         return new EndpointServiceFactoryCollection(
             $this->s3ClientFactory,
-            $this->originalImageS3PathProviderFactory,
+            $this->originalImagePathProviderFactory,
         );
     }
 

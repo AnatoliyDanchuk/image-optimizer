@@ -17,18 +17,12 @@ final class FilledExpectedInput
         $this->params = $params;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getParamValue(EndpointParamSpecificationTemplate $endpointParam)
+    public function getParamValue(EndpointParamSpecificationTemplate $endpointParam): mixed
     {
         return $this->params[$endpointParam];
     }
 
-    /**
-     * @return mixed
-     */
-    public function getValueOfCombinedParams(ConvertableCombinedEndpointParamSpecifications $specifications)
+    public function getValueOfCombinedParams(ConvertableCombinedEndpointParamSpecifications $specifications): mixed
     {
         $groupParamsWithValues = new WeakMap();
         foreach ($specifications->getOnlyChildren() as $item) {
@@ -40,15 +34,5 @@ final class FilledExpectedInput
         }
 
         return $specifications->toApplicationObject(new CombinedEndpointParam($groupParamsWithValues));
-    }
-
-    public function extract(ExpectedInput $specifications): self
-    {
-        $expectedInputWithValues = new WeakMap();
-        foreach ($specifications->getEndpointParams() as $paramSpecification) {
-            $expectedInputWithValues[$paramSpecification] = $this->params[$paramSpecification];
-        }
-
-        return new self($expectedInputWithValues);
     }
 }

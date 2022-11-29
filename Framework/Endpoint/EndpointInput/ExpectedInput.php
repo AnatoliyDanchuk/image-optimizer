@@ -58,6 +58,30 @@ final class ExpectedInput
         return $names;
     }
 
+    public function getNamesOfUrlQueryParams(): array
+    {
+        $names = [];
+        foreach ($this->endpointParams as $param) {
+            if ($param instanceof InHttpUrlQueryAllowed) {
+                $names[] = $param->getUrlQueryParamName();
+            }
+        }
+
+        return $names;
+    }
+
+    public function getPathsOfJsonBodyParams(): array
+    {
+        $paths = [];
+        foreach ($this->endpointParams as $param) {
+            if ($param instanceof InJsonHttpBodyAllowed) {
+                $paths[] = $param->getJsonItemPath();
+            }
+        }
+
+        return $paths;
+    }
+
     public function identifyFailedParamsByError(Throwable $error): array
     {
         $params = [];

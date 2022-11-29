@@ -2,6 +2,7 @@
 
 namespace Framework\Endpoint\EndpointParamSpecification;
 
+use Framework\Endpoint\EndpointInput\FoundParam;
 use Framework\Exception\InvalidEndpointParamException;
 use Framework\Exception\ValidatorException;
 use Framework\Validator;
@@ -17,13 +18,13 @@ abstract class EndpointParamSpecificationTemplate
         $this->validator = $validator;
     }
 
-    public function validateValue($paramValue): void
+    public function validateValue(FoundParam $foundParam): void
     {
         $paramConstraints = $this->getParamConstraints();
         try {
-            $this->validator->validate($paramValue, $paramConstraints);
+            $this->validator->validate($foundParam->value, $paramConstraints);
         } catch (ValidatorException $exception) {
-            throw new InvalidEndpointParamException($this, $paramValue, $exception);
+            throw new InvalidEndpointParamException($foundParam, $exception);
         }
     }
 

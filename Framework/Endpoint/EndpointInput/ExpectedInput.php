@@ -7,7 +7,6 @@ use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemp
 use Framework\Endpoint\EndpointParamSpecification\HasRelatedErrorClass;
 use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
 use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
-use Framework\Exception\ParamIsNotAllowedByAnyPlaceError;
 use Throwable;
 
 final class ExpectedInput
@@ -15,10 +14,7 @@ final class ExpectedInput
     /** @var EndpointParamSpecificationTemplate[] */
     private array $endpointParams;
 
-    /**
-     * @param CombinedEndpointParamSpecifications|EndpointParamSpecificationTemplate ...$endpointParams
-     */
-    public function __construct(...$endpointParams)
+    public function __construct(CombinedEndpointParamSpecifications|EndpointParamSpecificationTemplate ...$endpointParams)
     {
         $combinedParams = [];
         $separatedParams = [];
@@ -36,26 +32,6 @@ final class ExpectedInput
     public function getEndpointParams(): array
     {
         return $this->endpointParams;
-    }
-
-    public function getNamesOfAllParams(): array
-    {
-        $names = [];
-        foreach ($this->endpointParams as $param) {
-            // todo: exists in both variants
-            // todo: allowed on both but exists only on 1
-            // todo: Param place: JsonBody, UrlQuery, ...
-            if ($param instanceof InHttpUrlQueryAllowed) {
-                $paramName = $param->getUrlQueryParamName();
-            } elseif ($param instanceof InJsonHttpBodyAllowed) {
-                $paramName = implode(':{', $param->getJsonItemPath());
-            } else {
-                throw new ParamIsNotAllowedByAnyPlaceError($param);
-            }
-            $names[] = $paramName;
-        }
-
-        return $names;
     }
 
     public function getNamesOfUrlQueryParams(): array

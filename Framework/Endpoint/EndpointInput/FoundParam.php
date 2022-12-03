@@ -15,16 +15,4 @@ final class FoundParam
     )
     {
     }
-
-    public function formatToOutput(): array
-    {
-        return [
-            'place' => $this->place,
-            'path' => match ($this->place) {
-                ParamPlace::UrlQuery => $this->specification->getUrlQueryParamName(),
-                ParamPlace::JsonBody => implode(':{', $this->specification->getJsonItemPath()),
-            },
-            'foundValue' => $this->value,
-        ];
-    }
 }

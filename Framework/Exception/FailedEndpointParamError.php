@@ -2,25 +2,18 @@
 
 namespace Framework\Exception;
 
-use Framework\Endpoint\EndpointInput\AppliedInput;
-use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
+use Framework\Endpoint\EndpointInput\AppliedParam;
+use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
 
 final class FailedEndpointParamError extends ExceptionWithContext
 {
-    /** @param EndpointParamSpecificationTemplate[] $params */
     public function __construct(
-        array $params,
-        AppliedInput $appliedInput,
-        ExceptionWithContext $exception
+        ExceptionWithContext $exception,
+        AppliedParam ...$appliedInput,
     ) {
-        $relatedParametersInfo = [];
-        foreach ($params as $param) {
-            $relatedParametersInfo[] = $appliedInput->getParam($param)->formatWithValueToOutput();
-        }
-
         parent::__construct([
             'failedInput' => [
-                'relatedParameters' => $relatedParametersInfo,
+                'relatedParameters' => (new EndpointInputInfoBuilder())->buildFilledInputInfo(...$appliedInput),
                 'reason' => $exception->getContext()
             ],
         ], $exception);

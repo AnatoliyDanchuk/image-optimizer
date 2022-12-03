@@ -11,6 +11,7 @@ use Framework\Endpoint\EndpointInput\FoundParam;
 use Framework\Endpoint\EndpointInput\IgnoredInput;
 use Framework\Endpoint\EndpointInput\IgnoredParam;
 use Framework\Endpoint\EndpointInput\ParamPlace;
+use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
 use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Framework\Exception\EndpointException;
@@ -19,10 +20,13 @@ use Framework\Exception\FailedEndpointParamError;
 use Framework\Exception\InvalidEndpointInputException;
 use Framework\Exception\InvalidEndpointParamException;
 use Framework\Exception\ParamIsNotAllowedByAnyPlaceError;
+use Framework\Exception\ParamValueIsNotFoundAnywhere;
 use Framework\Exception\SameParamFoundInFewPlacesError;
 use Framework\Exception\UnexpectedEndpointError;
+use Framework\Exception\ParamValueIsNotFound;
 use Framework\JsonCoder\JsonDecoder;
 use Framework\JsonCoder\JsonEncoder;
+use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -56,9 +60,9 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
 
     final protected function handleRequest(Request $request): Response
     {
-        $parsedExpectedInput = $this->parseExpectedInput($request);
+        $appliedInput = $this->parseExpectedInput($request);
         $ignoredInput = $this->getIgnoredInput($request);
-        return $this->handleInput($parsedExpectedInput, $ignoredInput);
+        return $this->handleInput($appliedInput, $ignoredInput);
     }
 
     private function parseExpectedInput(Request $request): AppliedInput
@@ -96,39 +100,54 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
     ): FoundParam
     {
         $foundParams = [];
+        $notFoundExceptions = [];
 
         if ($paramSpecification instanceof InHttpUrlQueryAllowed) {
-            $foundParams[] = $this->parseUrlQueryParam($paramSpecification, $request);
+            try {
+                $foundParams[] = $this->parseUrlQueryParam($paramSpecification, $request);
+            } catch (ParamValueIsNotFound $exception) {
+                $notFoundExceptions[] = $exception;
+            }
         }
 
         if ($paramSpecification instanceof InJsonHttpBodyAllowed) {
-            $foundParams[] = $this->parseJsonParam($paramSpecification, $request);
+            try {
+                $foundParams[] = $this->parseJsonParam($paramSpecification, $request);
+            } catch (ParamValueIsNotFound $exception) {
+                $notFoundExceptions[] = $exception;
+            }
         }
 
         switch (count($foundParams)) {
-            case 0: throw new ParamIsNotAllowedByAnyPlaceError($paramSpecification);
+            case 0: empty($notFoundExceptions)
+                ? throw new ParamIsNotAllowedByAnyPlaceError($paramSpecification)
+                : throw new ParamValueIsNotFoundAnywhere(...$notFoundExceptions);
             case 1: return $foundParams[0];
             default: throw new SameParamFoundInFewPlacesError(...$foundParams);
         }
     }
 
-    private function parseUrlQueryParam(InHttpUrlQueryAllowed $paramSpecification, Request $request): FoundParam
+    private function parseUrlQueryParam(InHttpUrlQueryAllowed|EndpointParamSpecificationTemplate $paramSpecification, Request $request): FoundParam
     {
         $paramName = $paramSpecification->getUrlQueryParamName();
-        $paramValue = $request->get($paramName, '');
+        if (!$request->query->has($paramName)) {
+            throw new ParamValueIsNotFound($paramSpecification, ParamPlace::UrlQuery);
+        }
+        $paramValue = $request->query->get($paramName);
         return new FoundParam($paramSpecification, ParamPlace::UrlQuery, $paramValue);
     }
 
-    private function parseJsonParam(InJsonHttpBodyAllowed $paramSpecification, Request $request): FoundParam
+    private function parseJsonParam(InJsonHttpBodyAllowed|EndpointParamSpecificationTemplate $paramSpecification, Request $request): FoundParam
     {
         $paramPath = $paramSpecification->getJsonItemPath();
 
         $value = (new JsonDecoder())->decode($request->getContent());
         foreach ($paramPath as $pathItem) {
             $currentHierarchyItem = $value;
-            $value = is_object($currentHierarchyItem) && property_exists($currentHierarchyItem, $pathItem)
-                ? $currentHierarchyItem->$pathItem
-                : '';
+            if (!(is_object($currentHierarchyItem) && property_exists($currentHierarchyItem, $pathItem))) {
+                throw new ParamValueIsNotFound($paramSpecification, ParamPlace::JsonBody);
+            }
+            $value = $currentHierarchyItem->$pathItem;
         }
 
         $paramValue = is_scalar($value)
@@ -230,26 +249,25 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
 
     final protected function handleInput(AppliedInput $appliedInput, IgnoredInput $ignoredInput): Response
     {
-        $inputParams = $this->formatInputParams($appliedInput, $ignoredInput);
+        $inputInfo = (new EndpointInputInfoBuilder())->buildInputInfo($appliedInput, $ignoredInput);
 
         try {
             $endpointOutput = $this->getEndpointOutput($appliedInput);
         } catch (DomainException $error) {
-            throw new EndpointException($inputParams, $error);
+            throw new EndpointException($inputInfo, $error);
         } catch (ExceptionWithContext|Throwable $error) {
             $failedInputParams = $this->getExpectedInput()->identifyFailedParamsByError($error);
             if (!empty($failedInputParams)) {
                 throw new FailedEndpointParamError(
-                    $failedInputParams,
-                    $appliedInput,
                     $error,
+                    ...$appliedInput->getParams(...$failedInputParams),
                 );
             }
 
             throw new UnexpectedEndpointError(
                 $this->getHttpMethod(),
                 $this->getHttpPath(),
-                $inputParams,
+                $inputInfo,
                 $error
             );
         }
@@ -258,7 +276,7 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
         // So client sure his send request was not just valid,
         // but every input param was applied as expected.
         return new JsonResponse([
-            'input' => $inputParams,
+            'input' => $inputInfo,
             'output' => $endpointOutput,
         ]);
     }
@@ -272,28 +290,6 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
      * @throws FailedEndpointParamError
      */
     abstract protected function executePostponedAction(FilledExpectedInput $input): array;
-
-    private function formatInputParams(AppliedInput $filledInputParams, IgnoredInput $ignoredInputParams): array
-    {
-        $paramsWithValues = [];
-        $paramsWithoutValues = [];
-
-        foreach ($this->getExpectedInput()->getEndpointParams() as $param) {
-            $appliedParam = $filledInputParams->getParam($param);
-
-            if ($appliedParam->getValue() !== null) {
-                $paramsWithValues[] = $appliedParam->formatWithValueToOutput();
-            } else {
-                $paramsWithoutValues[] = $appliedParam->formatWithoutValuesToOutput();
-            }
-        }
-
-        return [
-            'appliedExpectedParams' => $paramsWithValues,
-            'unusedPossibleParams' => $paramsWithoutValues,
-            'ignoredUnexpectedParams' => $ignoredInputParams->formatToOutputArray(),
-        ];
-    }
 
     private function getEndpointOutput(AppliedInput $appliedInput): array
     {

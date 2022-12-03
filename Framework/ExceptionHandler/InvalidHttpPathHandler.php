@@ -3,7 +3,9 @@
 namespace Framework\ExceptionHandler;
 
 use Framework\Endpoint\BundleEndpoint\CheckHealthEndpoint;
+use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Endpoint\EndpointTemplate\ApplicationHttpEndpointTemplate;
+use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
 use Framework\ResponseBuilder\InvalidHttpRequestResponseBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -14,24 +16,13 @@ use Symfony\Component\Routing\RouterInterface;
 
 final class InvalidHttpPathHandler implements ExceptionHandlerInterface
 {
-    private UrlGeneratorInterface $urlGenerator;
-    private CheckHealthEndpoint $helpEndpoint;
-    private InvalidHttpRequestResponseBuilder $responseBuilder;
-    private RouterInterface $router;
-    private ContainerInterface $serviceProvider;
-
     public function __construct(
-        UrlGeneratorInterface $urlGenerator,
-        CheckHealthEndpoint $helpEndpoint,
-        InvalidHttpRequestResponseBuilder $responseBuilder,
-        RouterInterface $router,
-        ContainerInterface $serviceProvider
+        private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly CheckHealthEndpoint $helpEndpoint,
+        private readonly InvalidHttpRequestResponseBuilder $responseBuilder,
+        private readonly RouterInterface $router,
+        private readonly ContainerInterface $serviceProvider,
     ) {
-        $this->serviceProvider = $serviceProvider;
-        $this->router = $router;
-        $this->responseBuilder = $responseBuilder;
-        $this->helpEndpoint = $helpEndpoint;
-        $this->urlGenerator = $urlGenerator;
     }
 
     public function onKernelException(ExceptionEvent $event): void
@@ -82,40 +73,47 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
 
     private function buildFoundRelatedRoutes(RouteCollection $matchedRouteCollectionByPath): array
     {
-        $namesOfExpectedParamsByRouteName = $this->getNamesOfExpectedParamsByRouteName($matchedRouteCollectionByPath);
-        $namesOfUniqueParamsByRouteName = $this->getNamesOfUniqueParamsByRouteName($namesOfExpectedParamsByRouteName);
+        $expectedParamsByRouteName = $this->getExpectedParamsByRouteName($matchedRouteCollectionByPath);
+        $uniqueParamsByRouteName = $this->getUniqueParamsByRouteName($expectedParamsByRouteName);
 
         // Simplify of matching expected routes in tests.
-        ksort($namesOfUniqueParamsByRouteName);
+        ksort($uniqueParamsByRouteName);
 
         $foundRelatedRoutes = [];
-        foreach ($namesOfUniqueParamsByRouteName as $routeName => $namesOfUniqueParams) {
+        foreach ($uniqueParamsByRouteName as $routeName => $uniqueParams) {
             $foundRelatedRoutes[$routeName] = [
-                'uniqueParams' => $namesOfUniqueParams,
+                'uniqueParams' => (new EndpointInputInfoBuilder())->buildParamPathsInfo(...$uniqueParams),
             ];
         }
         return $foundRelatedRoutes;
     }
 
-    private function getNamesOfExpectedParamsByRouteName(RouteCollection $routeCollection): array
+    /** @return EndpointParamSpecificationTemplate[][] */
+    private function getExpectedParamsByRouteName(RouteCollection $routeCollection): array
     {
         $namesOfExpectedParamsByRouteName = [];
         foreach ($routeCollection as $routeName => $route) {
             $endpointClass = $route->getDefault('_controller')[0];
             /** @var ApplicationHttpEndpointTemplate $endpoint */
             $endpoint = $this->serviceProvider->get($endpointClass);
-            $namesOfExpectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getNamesOfAllParams();
+            $namesOfExpectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getEndpointParams();
         }
         return $namesOfExpectedParamsByRouteName;
     }
 
-    private function getNamesOfUniqueParamsByRouteName(array $namesOfExpectedParamsByRouteName): array
+    /** @return EndpointParamSpecificationTemplate[][] */
+    private function getUniqueParamsByRouteName(array $expectedParamsByRouteName): array
     {
-        $namesOfUniqueParamsByRouteName = [];
-        foreach ($namesOfExpectedParamsByRouteName as $routeName => $namesOfExpectedParams) {
-            $others = array_diff_key($namesOfExpectedParamsByRouteName, [$routeName => null]);
-            $namesOfUniqueParamsByRouteName[$routeName] = array_diff($namesOfExpectedParams, ...array_values($others));
+        $uniqueParamsByRouteName = [];
+        foreach ($expectedParamsByRouteName as $routeName => $expectedParams) {
+            $others = array_diff_key($expectedParamsByRouteName, [$routeName => null]);
+            /**
+             * array_diff does not compare objects as "===" or "==",
+             * array_diff compare objects like (string)Object1 == (string)Object2
+             * @uses \Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate::__toString()
+             */
+            $uniqueParamsByRouteName[$routeName] = array_diff($expectedParams, ...array_values($others));
         }
-        return $namesOfUniqueParamsByRouteName;
+        return $uniqueParamsByRouteName;
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Framework\Endpoint\EndpointInput;
 
+use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
+
 final class AppliedParam
 {
     private mixed $parsedValue;
@@ -18,31 +20,13 @@ final class AppliedParam
         return $this->parsedValue;
     }
 
-    public function formatWithValueToOutput(): array
+    public function getParamSpecification(): EndpointParamSpecificationTemplate
     {
-        return $this->formatPlace() + $this->formatPlaceDetails() + $this->formatValue();
+        return $this->foundParam->specification;
     }
 
-    public function formatWithoutValuesToOutput(): array
+    public function getPlaceFoundIn(): ParamPlace
     {
-        return $this->formatPlace() + $this->formatPlaceDetails();
-    }
-
-    private function formatPlace(): array
-    {
-        return ['place' => $this->foundParam->place->name];
-    }
-
-    private function formatPlaceDetails(): array
-    {
-        return match ($this->foundParam->place) {
-            ParamPlace::UrlQuery => ['name' => $this->foundParam->specification->getUrlQueryParamName()],
-            ParamPlace::JsonBody => ['path' => implode(':{', $this->foundParam->specification->getJsonItemPath())],
-        };
-    }
-
-    private function formatValue(): array
-    {
-        return ['value' => $this->parsedValue];
+        return $this->foundParam->place;
     }
 }

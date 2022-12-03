@@ -10,12 +10,9 @@ use Symfony\Component\Validator\Constraint;
 
 abstract class EndpointParamSpecificationTemplate
 {
-    private Validator $validator;
-
     public function __construct(
-        Validator $validator
+        private readonly Validator $validator,
     ) {
-        $this->validator = $validator;
     }
 
     public function validateValue(FoundParam $foundParam): void
@@ -35,10 +32,6 @@ abstract class EndpointParamSpecificationTemplate
 
     abstract public function parseValue(string $value);
 
-    /**
-     * Used for search unique route params.
-     * @see HttpEndpointLoader::fixRoutesWithSamePath()
-     */
     final public function __toString(): string
     {
         return get_class($this);

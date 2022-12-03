@@ -3,6 +3,7 @@
 namespace Framework\Exception;
 
 use Framework\Endpoint\EndpointInput\FoundParam;
+use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
 
 final class SameParamFoundInFewPlacesError extends ExceptionWithContext
 {
@@ -10,17 +11,7 @@ final class SameParamFoundInFewPlacesError extends ExceptionWithContext
     {
         parent::__construct([
             'errorReason' => 'Expects the param found only in 1 place.',
-            'foundParams' => $this->formatToOutput(...$foundParams),
+            'foundParams' => (new EndpointInputInfoBuilder())->buildFilledInputInfo(...$foundParams),
         ]);
-    }
-
-    private function formatToOutput(FoundParam ...$foundParams): array
-    {
-        $formatted = [];
-        foreach ($foundParams as $param) {
-            $formatted[] = $param->formatToOutput();
-        }
-
-        return $formatted;
     }
 }

@@ -17,11 +17,6 @@ final class AppliedInput
         $this->params = $params;
     }
 
-    public function getParam(EndpointParamSpecificationTemplate $endpointParam): AppliedParam
-    {
-        return $this->params[$endpointParam];
-    }
-
     public function fillExpectedInput(ExpectedInput $specifications): FilledExpectedInput
     {
         $expectedInputWithValues = new WeakMap();
@@ -30,5 +25,44 @@ final class AppliedInput
         }
 
         return new FilledExpectedInput($expectedInputWithValues);
+    }
+
+    /** @return AppliedParam[] */
+    public function getParams(EndpointParamSpecificationTemplate ...$paramSpecifications): array
+    {
+        $params = [];
+        foreach ($paramSpecifications as $paramSpecification) {
+            $params[] = $this->params[$paramSpecification];
+        }
+        return $params;
+    }
+
+    /** @return AppliedParam[] */
+    public function getWithoutValues(): array
+    {
+        $params = [];
+        foreach ($this->params as $param) {
+            if (!$this->hasValue($param)) {
+                $params[] = $param;
+            }
+        }
+        return $params;
+    }
+
+    /** @return AppliedParam[] */
+    public function getWithValues(): array
+    {
+        $params = [];
+        foreach ($this->params as $param) {
+            if ($this->hasValue($param)) {
+                $params[] = $param;
+            }
+        }
+        return $params;
+    }
+
+    private function hasValue(mixed $param): bool
+    {
+        return $param->getValue() !== null && $param->getValue() !== '';
     }
 }

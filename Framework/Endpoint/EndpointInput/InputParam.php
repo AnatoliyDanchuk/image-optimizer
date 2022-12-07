@@ -2,11 +2,11 @@
 
 namespace Framework\Endpoint\EndpointInput;
 
-final class IgnoredParam
+abstract class InputParam
 {
     public function __construct(
         public readonly ParamPlace $place,
-        public readonly string|array $detailedPlace,
+        public readonly string|array $placePath,
         public readonly string $value,
     )
     {

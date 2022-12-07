@@ -5,8 +5,6 @@ namespace Framework\Endpoint\EndpointInput;
 use Framework\Endpoint\CombinedEndpointParamSpecifications\CombinedEndpointParamSpecifications;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Endpoint\EndpointParamSpecification\HasRelatedErrorClass;
-use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
-use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Throwable;
 
 final class ExpectedInput
@@ -32,30 +30,6 @@ final class ExpectedInput
     public function getEndpointParams(): array
     {
         return $this->endpointParams;
-    }
-
-    public function getNamesOfUrlQueryParams(): array
-    {
-        $names = [];
-        foreach ($this->endpointParams as $param) {
-            if ($param instanceof InHttpUrlQueryAllowed) {
-                $names[] = $param->getUrlQueryParamName();
-            }
-        }
-
-        return $names;
-    }
-
-    public function getPathsOfJsonBodyParams(): array
-    {
-        $paths = [];
-        foreach ($this->endpointParams as $param) {
-            if ($param instanceof InJsonHttpBodyAllowed) {
-                $paths[] = $param->getJsonItemPath();
-            }
-        }
-
-        return $paths;
     }
 
     public function identifyFailedParamsByError(Throwable $error): array

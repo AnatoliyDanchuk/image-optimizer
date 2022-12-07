@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 
@@ -73,32 +74,20 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
 
     private function buildFoundRelatedRoutes(RouteCollection $matchedRouteCollectionByPath): array
     {
-        $expectedParamsByRouteName = $this->getExpectedParamsByRouteName($matchedRouteCollectionByPath);
+        $expectedParamsByRouteName = array_map([$this, 'getEndpointParams'], $matchedRouteCollectionByPath->all());
         $uniqueParamsByRouteName = $this->getUniqueParamsByRouteName($expectedParamsByRouteName);
-
-        // Simplify of matching expected routes in tests.
-        ksort($uniqueParamsByRouteName);
-
-        $foundRelatedRoutes = [];
-        foreach ($uniqueParamsByRouteName as $routeName => $uniqueParams) {
-            $foundRelatedRoutes[$routeName] = [
-                'uniqueParams' => (new EndpointInputInfoBuilder())->buildParamPathsInfo(...$uniqueParams),
-            ];
-        }
-        return $foundRelatedRoutes;
+        return array_map([new EndpointInputInfoBuilder(), 'buildUniqueParamsInfo'], $uniqueParamsByRouteName);
     }
 
-    /** @return EndpointParamSpecificationTemplate[][] */
-    private function getExpectedParamsByRouteName(RouteCollection $routeCollection): array
+    /**
+     * @return EndpointParamSpecificationTemplate[]
+     */
+    private function getEndpointParams(Route $route): array
     {
-        $namesOfExpectedParamsByRouteName = [];
-        foreach ($routeCollection as $routeName => $route) {
-            $endpointClass = $route->getDefault('_controller')[0];
-            /** @var ApplicationHttpEndpointTemplate $endpoint */
-            $endpoint = $this->serviceProvider->get($endpointClass);
-            $namesOfExpectedParamsByRouteName[$routeName] = $endpoint->getExpectedInput()->getEndpointParams();
-        }
-        return $namesOfExpectedParamsByRouteName;
+        $endpointClass = $route->getDefault('_controller')[0];
+        /** @var ApplicationHttpEndpointTemplate $endpoint */
+        $endpoint = $this->serviceProvider->get($endpointClass);
+        return $endpoint->getExpectedInput()->getEndpointParams();
     }
 
     /** @return EndpointParamSpecificationTemplate[][] */
@@ -108,8 +97,6 @@ final class InvalidHttpPathHandler implements ExceptionHandlerInterface
         foreach ($expectedParamsByRouteName as $routeName => $expectedParams) {
             $others = array_diff_key($expectedParamsByRouteName, [$routeName => null]);
             /**
-             * array_diff does not compare objects as "===" or "==",
-             * array_diff compare objects like (string)Object1 == (string)Object2
              * @uses \Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate::__toString()
              */
             $uniqueParamsByRouteName[$routeName] = array_diff($expectedParams, ...array_values($others));

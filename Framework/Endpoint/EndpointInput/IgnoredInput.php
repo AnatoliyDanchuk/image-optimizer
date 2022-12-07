@@ -7,7 +7,7 @@ final class IgnoredInput
     public readonly array $params;
 
     public function __construct(
-        IgnoredParam ...$params
+        FoundInputParam ...$params
     )
     {
         $this->params = $params;

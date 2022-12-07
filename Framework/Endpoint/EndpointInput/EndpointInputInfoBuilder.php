@@ -9,13 +9,11 @@ use Framework\Exception\ParamIsNotAllowedByAnyPlaceError;
 
 final class EndpointInputInfoBuilder
 {
-    public function buildParamPathsInfo(EndpointParamSpecificationTemplate ...$uniqueParams): array
+    public function buildUniqueParamsInfo(array $uniqueParams): array
     {
-        $info = [];
-        foreach ($uniqueParams as $param) {
-            $info[] = $this->buildParamAvailablePathsInfo($param);
-        }
-        return $info;
+        return [
+            'uniqueParams' => array_map([$this, 'buildParamAvailablePathsInfo'], $uniqueParams),
+        ];
     }
 
     private function buildParamAvailablePathsInfo(EndpointParamSpecificationTemplate $param): array
@@ -44,28 +42,28 @@ final class EndpointInputInfoBuilder
         };
     }
 
-    public function buildCustomPlacePathInfo(ParamPlace $paramPlace, string|array $paramPlaceDetails): array
+    public function buildCustomPlacePathInfo(ParamPlace $paramPlace, string|array $placePath): array
     {
         return ['paramPlace' => $paramPlace->name] + match ($paramPlace) {
             ParamPlace::UrlQuery => [
-                'urlQueryParamName' => $paramPlaceDetails
+                'urlQueryParamName' => $placePath
             ],
             ParamPlace::JsonBody => [
-                'jsonBodyParamPath' => implode(':{', $paramPlaceDetails)
+                'jsonBodyParamPath' => implode(':{', $placePath)
             ]
         };
     }
 
-    public function buildInputInfo(AppliedInput $appliedInput, IgnoredInput $ignoredInput): array
+    public function buildInputInfo(ParsedInput $parsedInput): array
     {
         return [
-            'appliedExpectedParams' => $this->buildFilledInputInfo(...$appliedInput->getWithValues()),
-            'unusedPossibleParams' => $this->buildFilledInputInfo(...$appliedInput->getWithoutValues()),
-            'ignoredUnexpectedParams' => $this->buildIgnoredInputInfo($ignoredInput),
+            'appliedExpectedParams' => $this->buildFilledInputInfo(...$parsedInput->appliedInput->getWithValues()),
+            'unusedPossibleParams' => $this->buildFilledInputInfo(...$parsedInput->appliedInput->getWithoutValues()),
+            'ignoredUnexpectedParams' => $this->buildIgnoredInputInfo($parsedInput->ignoredInput),
         ];
     }
 
-    public function buildFilledInputInfo(AppliedParam|FoundParam ...$params): array
+    public function buildFilledInputInfo(InputParam ...$params): array
     {
         $info = [];
         foreach ($params as $param) {
@@ -75,10 +73,10 @@ final class EndpointInputInfoBuilder
         return $info;
     }
 
-    public function buildFilledParamInfo(AppliedParam|FoundParam $param): array
+    public function buildFilledParamInfo(InputParam $param): array
     {
-        return $this->buildParamPlacePathInfo($param->getParamSpecification(), $param->getPlaceFoundIn())
-            + $this->buildValueInfo($param->getValue());
+        return $this->buildCustomPlacePathInfo($param->place, $param->placePath)
+            + $this->buildValueInfo($param->value);
     }
 
     private function buildValueInfo(mixed $value): array
@@ -90,14 +88,8 @@ final class EndpointInputInfoBuilder
     {
         $info = [];
         foreach ($ignoredInput->params as $ignoredParam) {
-            $info[] = $this->buildCustomFilledParamInfo($ignoredParam);
+            $info[] = $this->buildFilledParamInfo($ignoredParam);
         }
         return $info;
-    }
-
-    private function buildCustomFilledParamInfo(IgnoredParam $ignoredParam): array
-    {
-        return $this->buildCustomPlacePathInfo($ignoredParam->place, $ignoredParam->detailedPlace)
-            + $this->buildValueInfo($ignoredParam->value);
     }
 }

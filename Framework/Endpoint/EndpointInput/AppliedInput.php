@@ -21,7 +21,7 @@ final class AppliedInput
     {
         $expectedInputWithValues = new WeakMap();
         foreach ($specifications->getEndpointParams() as $paramSpecification) {
-            $expectedInputWithValues[$paramSpecification] = $this->params[$paramSpecification]->getValue();
+            $expectedInputWithValues[$paramSpecification] = $this->params[$paramSpecification]->value;
         }
 
         return new FilledExpectedInput($expectedInputWithValues);
@@ -42,7 +42,7 @@ final class AppliedInput
     {
         $params = [];
         foreach ($this->params as $param) {
-            if (!$this->hasValue($param)) {
+            if (!$this->isParamHasValue($param)) {
                 $params[] = $param;
             }
         }
@@ -54,15 +54,15 @@ final class AppliedInput
     {
         $params = [];
         foreach ($this->params as $param) {
-            if ($this->hasValue($param)) {
+            if ($this->isParamHasValue($param)) {
                 $params[] = $param;
             }
         }
         return $params;
     }
 
-    private function hasValue(mixed $param): bool
+    private function isParamHasValue(AppliedParam $param): bool
     {
-        return $param->getValue() !== null && $param->getValue() !== '';
+        return $param->value !== null && $param->value !== '';
     }
 }

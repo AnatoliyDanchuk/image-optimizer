@@ -2,13 +2,13 @@
 
 namespace Framework\Exception;
 
-use Framework\Endpoint\EndpointInput\FoundParam;
 use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
+use Framework\Endpoint\EndpointInput\FoundInputParam;
 
 final class InvalidEndpointParamException extends ExceptionWithContext
 {
     public function __construct(
-        FoundParam $foundParam,
+        FoundInputParam $foundParam,
         ValidatorException $validatorException
     ) {
         parent::__construct([

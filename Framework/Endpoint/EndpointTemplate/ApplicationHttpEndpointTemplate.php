@@ -24,6 +24,7 @@ use Framework\Exception\ParamValueIsNotFoundAnywhere;
 use Framework\Exception\SameParamFoundInFewPlacesError;
 use Framework\Exception\UnexpectedEndpointError;
 use Framework\Exception\ParamValueIsNotFound;
+use Framework\Exception\ValidatorException;
 use Framework\JsonCoder\JsonDecoder;
 use Framework\JsonCoder\JsonEncoder;
 use Framework\Endpoint\EndpointInput\EndpointInputInfoBuilder;
@@ -90,7 +91,11 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
     ): AppliedParam
     {
         $foundParam = $this->findParamFromRequest($paramSpecification, $request);
-        $paramSpecification->validateValue($foundParam);
+        try {
+            $paramSpecification->validateValue($foundParam->value);
+        } catch (ValidatorException $exception) {
+            throw new InvalidEndpointParamException($foundParam, $exception);
+        }
         return new AppliedParam($foundParam);
     }
 

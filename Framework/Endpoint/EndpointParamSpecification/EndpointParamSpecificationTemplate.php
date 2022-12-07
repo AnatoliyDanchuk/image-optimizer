@@ -2,12 +2,8 @@
 
 namespace Framework\Endpoint\EndpointParamSpecification;
 
-use Framework\Endpoint\EndpointInput\FoundParam;
-use Framework\Exception\InvalidEndpointParamException;
-use Framework\Exception\ValidatorException;
 use Framework\Validator;
 use Symfony\Component\Validator\Constraint;
-
 abstract class EndpointParamSpecificationTemplate
 {
     public function __construct(
@@ -15,14 +11,10 @@ abstract class EndpointParamSpecificationTemplate
     ) {
     }
 
-    public function validateValue(FoundParam $foundParam): void
+    public function validateValue(mixed $value): void
     {
         $paramConstraints = $this->getParamConstraints();
-        try {
-            $this->validator->validate($foundParam->value, $paramConstraints);
-        } catch (ValidatorException $exception) {
-            throw new InvalidEndpointParamException($foundParam, $exception);
-        }
+        $this->validator->validate($value, $paramConstraints);
     }
 
     /**

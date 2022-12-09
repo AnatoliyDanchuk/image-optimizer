@@ -9,11 +9,11 @@ final class FailedEndpointParamError extends ExceptionWithContext
 {
     public function __construct(
         ExceptionWithContext $exception,
-        AppliedParam ...$appliedInput,
+        AppliedParam ...$appliedParams,
     ) {
         parent::__construct([
             'failedInput' => [
-                'relatedParameters' => (new EndpointInputInfoBuilder())->buildFilledInputInfo(...$appliedInput),
+                'relatedParameters' => array_map([new EndpointInputInfoBuilder(), 'buildFilledParamInfo'], $appliedParams),
                 'reason' => $exception->getContext()
             ],
         ], $exception);

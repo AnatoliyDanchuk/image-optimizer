@@ -2,19 +2,20 @@
 
 namespace Api\EndpointParamSpecification;
 
+use Framework\Endpoint\EndpointInput\JsonBodyParamPath;
+use Framework\Endpoint\EndpointInput\ParamPathCollection;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Endpoint\EndpointParamSpecification\HasRelatedErrorClass;
-use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Framework\Endpoint\EndpointParamSpecification\RelatedErrorClasses;
 use Symfony\Component\Validator\Constraints;
 
-final class OriginalImageHttpPathSpecification extends EndpointParamSpecificationTemplate implements
-    InJsonHttpBodyAllowed,
-    HasRelatedErrorClass
+final class OriginalImageHttpPathSpecification extends EndpointParamSpecificationTemplate implements HasRelatedErrorClass
 {
-    public function getJsonItemPath(): array
+    public function getAvailableParamPaths(): ParamPathCollection
     {
-        return ['original_image', 'url'];
+        return new ParamPathCollection(
+            new JsonBodyParamPath(['original_image', 'url']),
+        );
     }
 
     protected function getParamConstraints(): array

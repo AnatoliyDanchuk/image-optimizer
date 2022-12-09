@@ -2,6 +2,7 @@
 
 namespace Framework\Endpoint\EndpointParamSpecification;
 
+use Framework\Endpoint\EndpointInput\ParamPathCollection;
 use Framework\Validator;
 use Symfony\Component\Validator\Constraint;
 abstract class EndpointParamSpecificationTemplate
@@ -10,6 +11,8 @@ abstract class EndpointParamSpecificationTemplate
         private readonly Validator $validator,
     ) {
     }
+
+    abstract public function getAvailableParamPaths(): ParamPathCollection;
 
     public function validateValue(mixed $value): void
     {

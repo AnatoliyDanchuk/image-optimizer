@@ -8,18 +8,17 @@ use Framework\Endpoint\EndpointInput\AppliedParam;
 use Framework\Endpoint\EndpointInput\ExpectedInput;
 use Framework\Endpoint\EndpointInput\FilledExpectedInput;
 use Framework\Endpoint\EndpointInput\IgnoredInput;
-use Framework\Endpoint\EndpointInput\ParamPlace;
+use Framework\Endpoint\EndpointInput\JsonBodyParamPath;
 use Framework\Endpoint\EndpointInput\ParsedInput;
 use Framework\Endpoint\EndpointInput\FoundInput;
 use Framework\Endpoint\EndpointInput\FoundInputParam;
-use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
-use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
+use Framework\Endpoint\EndpointInput\UrlQueryParamPath;
+use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Exception\EndpointException;
 use Framework\Exception\ExceptionWithContext;
 use Framework\Exception\FailedEndpointParamError;
 use Framework\Exception\InvalidEndpointInputException;
 use Framework\Exception\InvalidEndpointParamException;
-use Framework\Exception\ParamIsNotAllowedByAnyPlaceError;
 use Framework\Exception\ParamValueIsNotFoundAnywhere;
 use Framework\Exception\SameParamFoundInFewPlacesError;
 use Framework\Exception\UnexpectedEndpointError;
@@ -94,7 +93,7 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
     }
 
     private function buildAppliedParam(
-        InHttpUrlQueryAllowed|InJsonHttpBodyAllowed $paramSpecification,
+        EndpointParamSpecificationTemplate $paramSpecification,
         FoundInputParam $foundInputParam,
     ): AppliedParam
     {
@@ -104,40 +103,29 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
             throw new InvalidEndpointParamException($foundInputParam, $exception);
         }
         return new AppliedParam(
-            $foundInputParam->place,
-            $foundInputParam->placePath,
+            $foundInputParam->paramPath,
             $paramSpecification->parseValue($foundInputParam->value),
         );
     }
 
     private function getFoundParam(
-        InHttpUrlQueryAllowed|InJsonHttpBodyAllowed $paramSpecification,
+        EndpointParamSpecificationTemplate $paramSpecification,
         FoundInput $foundInput,
     ): FoundInputParam
     {
         $foundParams = [];
         $notFoundExceptions = [];
 
-        if ($paramSpecification instanceof InHttpUrlQueryAllowed) {
+        foreach ($paramSpecification->getAvailableParamPaths()->paramPaths as $paramPath) {
             try {
-                $foundParams[] = $foundInput->getParam(ParamPlace::UrlQuery, $paramSpecification->getUrlQueryParamName());
-            } catch (ParamValueIsNotFound $exception) {
-                $notFoundExceptions[] = $exception;
-            }
-        }
-
-        if ($paramSpecification instanceof InJsonHttpBodyAllowed) {
-            try {
-                $foundParams[] = $foundInput->getParam(ParamPlace::JsonBody, $paramSpecification->getJsonItemPath());
+                $foundParams[] = $foundInput->getParam($paramPath);
             } catch (ParamValueIsNotFound $exception) {
                 $notFoundExceptions[] = $exception;
             }
         }
 
         switch (count($foundParams)) {
-            case 0: empty($notFoundExceptions)
-                ? throw new ParamIsNotAllowedByAnyPlaceError($paramSpecification)
-                : throw new ParamValueIsNotFoundAnywhere(...$notFoundExceptions);
+            case 0: throw new ParamValueIsNotFoundAnywhere(...$notFoundExceptions);
             case 1: return $foundParams[0];
             default: throw new SameParamFoundInFewPlacesError(...$foundParams);
         }
@@ -148,7 +136,10 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
         $params = [];
 
         foreach ($request->query->all() as $paramName => $paramValue) {
-            $params[] = new FoundInputParam(ParamPlace::UrlQuery, $paramName, $paramValue);
+            $params[] = new FoundInputParam(
+                new UrlQueryParamPath($paramName),
+                $paramValue,
+            );
         }
 
         return $params;
@@ -162,9 +153,8 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
             $foundJson = json_decode($request->getContent(), flags: JSON_THROW_ON_ERROR);
             foreach ($this->getAllPaths($foundJson) as $path) {
                 $params[] = new FoundInputParam(
-                    ParamPlace::JsonBody,
-                    $path,
-                    $this->getJsonParamValue($foundJson, $path)
+                    new JsonBodyParamPath($path),
+                    $this->getJsonParamValue($foundJson, $path),
                 );
             }
         } catch (\JsonException) {

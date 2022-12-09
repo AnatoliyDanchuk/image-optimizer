@@ -11,7 +11,7 @@ final class SameParamFoundInFewPlacesError extends ExceptionWithContext
     {
         parent::__construct([
             'errorReason' => 'Expects the param found only in 1 place.',
-            'foundParams' => (new EndpointInputInfoBuilder())->buildFilledInputInfo(...$foundParams),
+            'foundParams' => array_map([new EndpointInputInfoBuilder(), 'buildFilledParamInfo'], $foundParams),
         ]);
     }
 }

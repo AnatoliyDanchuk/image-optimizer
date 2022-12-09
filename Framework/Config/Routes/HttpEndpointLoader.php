@@ -4,11 +4,8 @@ namespace Framework\Config\Routes;
 
 use FilesystemIterator;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
-use Framework\Endpoint\EndpointParamSpecification\InHttpUrlQueryAllowed;
-use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Framework\Endpoint\EndpointTemplate\ApplicationHttpEndpointTemplate;
 use Framework\Endpoint\EndpointTemplate\HttpEndpointTemplate;
-use Framework\Endpoint\JsonRequestTransformer;
 use LogicException;
 use ReflectionClass;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -124,7 +121,7 @@ final class HttpEndpointLoader extends FileLoader
                 $uniqueExpectedParams = array_diff($expectedParams, ...array_values($expectedParamsOfOtherRoutes));
 
                 if (!empty($uniqueExpectedParams)) {
-                    $condition = $this->buildRouteCondition($uniqueExpectedParams);
+                    $condition = $this->buildRouteCondition(...$uniqueExpectedParams);
                     /** @var Route $route */
                     $route = $routes->get($routeName);
                     $route->setCondition($condition);
@@ -178,15 +175,12 @@ final class HttpEndpointLoader extends FileLoader
         return $expectedParamsByRoutePath;
     }
 
-    private function buildRouteCondition(array $params): string
+    private function buildRouteCondition(EndpointParamSpecificationTemplate ...$params): string
     {
         $conditionChecks = [];
         foreach ($params as $param) {
-            if ($param instanceof InHttpUrlQueryAllowed) {
-                $conditionChecks[] = "request.query.has('" . $param->getUrlQueryParamName() . "')";
-            }
-            if ($param instanceof InJsonHttpBodyAllowed) {
-                $conditionChecks[] = "request.attributes.get('".JsonRequestTransformer::REQUEST_ATTRIBUTE_JSON_CONTENT."')?.". implode('?.', $param->getJsonItemPath()) . " !== null";
+            foreach ($param->getAvailableParamPaths()->paramPaths as $paramPath) {
+                $conditionChecks[] = $paramPath->getRouteCondition();
             }
         }
 

@@ -14,19 +14,13 @@ final class FoundInput
     {
         $this->indexedParams = [];
         foreach ($params as $param) {
-            $this->indexedParams[$this->buildIndexKey($param->place, $param->placePath)] = $param;
+            $this->indexedParams[$param->paramPath->getSignature()] = $param;
         }
     }
 
-    private function buildIndexKey(ParamPlace $searchParamPlace, array|string $searchPlaceDetails): string
+    public function getParam(ParamPath $paramPath): FoundInputParam
     {
-        return $searchParamPlace->name . '_' . serialize($searchPlaceDetails);
-    }
-
-    public function getParam(ParamPlace $searchParamPlace, array|string $searchPlaceDetails): FoundInputParam
-    {
-        $key = $this->buildIndexKey($searchParamPlace, $searchPlaceDetails);
-        return $this->indexedParams[$key] ?? throw new ParamValueIsNotFound($searchParamPlace, $searchPlaceDetails);
+        return $this->indexedParams[$paramPath->getSignature()] ?? throw new ParamValueIsNotFound($paramPath);
     }
 
     public function diff(FoundInputParam ...$params): array

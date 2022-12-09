@@ -2,16 +2,18 @@
 
 namespace Api\EndpointParamSpecification\WantedImageGeometry;
 
+use Framework\Endpoint\EndpointInput\JsonBodyParamPath;
+use Framework\Endpoint\EndpointInput\ParamPathCollection;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
-use Framework\Endpoint\EndpointParamSpecification\InJsonHttpBodyAllowed;
 use Symfony\Component\Validator\Constraints;
 
-final class HeightSpecification extends EndpointParamSpecificationTemplate implements
-    InJsonHttpBodyAllowed
+final class HeightSpecification extends EndpointParamSpecificationTemplate
 {
-    public function getJsonItemPath(): array
+    public function getAvailableParamPaths(): ParamPathCollection
     {
-        return ['wanted_image', 'height'];
+        return new ParamPathCollection(
+            new JsonBodyParamPath(['wanted_image', 'height']),
+        );
     }
 
     protected function getParamConstraints(): array

@@ -14,40 +14,24 @@ class ImageMagickResizer implements Resizer
         try {
             $imagick->readImageBlob($image->getContent());
 
-            $currentImageSize = $this->getImageGeometry($imagick);
-            $imageGeometryForScaling = $this->calculateImageGeometryForScaling($currentImageSize, $wantedImageGeometry);
-
             $imagick->resizeImage(
-                $imageGeometryForScaling->getWidth(),
-                $imageGeometryForScaling->getHeight(),
+                $wantedImageGeometry->getWidth(),
+                $wantedImageGeometry->getHeight(),
                 \Imagick::FILTER_LANCZOS,
                 0.9,
                 true,
             );
 
-            $imagick->cropImage($wantedImageGeometry->getWidth(),$wantedImageGeometry->getHeight(),0,0);
+            $imagick->extentImage(
+                $wantedImageGeometry->getWidth(),
+                $wantedImageGeometry->getHeight(),
+                - (($wantedImageGeometry->getWidth() - $imagick->getImageGeometry()['width']) / 2),
+                - (($wantedImageGeometry->getHeight() - $imagick->getImageGeometry()['height']) / 2),
+            );
 
             return new Image($imagick->getImageBlob());
         } finally {
             $imagick->destroy();
         }
-    }
-
-    private function getImageGeometry(\Imagick $imagick): ImageGeometry
-    {
-        $imageGeometry = $imagick->getImageGeometry();
-        return new ImageGeometry($imageGeometry['width'], $imageGeometry['height']);
-    }
-
-    private function calculateImageGeometryForScaling(ImageGeometry $currentImageSize, ImageGeometry $wantedImageGeometry): ImageGeometry
-    {
-        if ($currentImageSize->getWidth() > $currentImageSize->getHeight()) {
-            $heightForScaling = $wantedImageGeometry->getHeight();
-            $widthForScaling = ($heightForScaling / $currentImageSize->getHeight()) * $currentImageSize->getWidth();
-        } else {
-            $widthForScaling = $wantedImageGeometry->getWidth();
-            $heightForScaling = ($widthForScaling / $currentImageSize->getWidth()) * $currentImageSize->getHeight();
-        }
-        return new ImageGeometry($widthForScaling, $heightForScaling);
     }
 }

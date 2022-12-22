@@ -17,11 +17,9 @@ final class CombinedEndpointParam
         $this->params = $params;
     }
 
-    /**
-     * @param EndpointParamSpecificationTemplate|ConvertableCombinedEndpointParamSpecifications $endpointParam
-     * @return mixed
-     */
-    public function getValue($endpointParam)
+    public function getValue(
+        EndpointParamSpecificationTemplate|ConvertableCombinedEndpointParamSpecifications $endpointParam
+    ): mixed
     {
         return $this->params[$endpointParam];
     }

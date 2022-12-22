@@ -1,18 +1,20 @@
 <?php
 
-namespace Api\EndpointParamSpecification\WantedImageGeometry;
+namespace Api\EndpointParamSpecification;
 
+use Domain\Image\ImageGeometry;
 use Framework\Endpoint\EndpointInput\JsonBodyParamPath;
 use Framework\Endpoint\EndpointInput\ParamPathCollection;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Symfony\Component\Validator\Constraints;
 
-final class WidthSpecification extends EndpointParamSpecificationTemplate
+final class WantedReplicationSpecification extends EndpointParamSpecificationTemplate
 {
+
     public function getAvailableParamPaths(): ParamPathCollection
     {
         return new ParamPathCollection(
-            new JsonBodyParamPath(['wanted_image', 'width']),
+            new JsonBodyParamPath(['thumbs']),
         );
     }
 
@@ -20,11 +22,17 @@ final class WidthSpecification extends EndpointParamSpecificationTemplate
     {
         return [
             new Constraints\NotBlank(),
+            new Constraints\Count(min: 1),
         ];
     }
 
-    public function parseValue(string $value): int
+    public function parseValue(string|array $value): array
     {
-        return (int) $value;
+        $wantedReplication = [];
+        foreach($value as $item) {
+            $wantedReplication[] = new ImageGeometry($item->width, $item->height);
+        }
+
+        return $wantedReplication;
     }
 }

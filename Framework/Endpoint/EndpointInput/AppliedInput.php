@@ -63,6 +63,8 @@ final class AppliedInput
 
     private function isParamHasValue(AppliedParam $param): bool
     {
-        return $param->value !== null && $param->value !== '';
+        return $param->value !== null
+            && $param->value !== ''
+            && (!is_array($param->value) || !empty($param->value));
     }
 }

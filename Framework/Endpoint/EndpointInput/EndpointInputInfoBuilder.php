@@ -35,7 +35,7 @@ final class EndpointInputInfoBuilder
     public function buildFilledParamInfo(InputParam $param): array
     {
         return $this->buildCustomPlacePathInfo($param->paramPath)
-            + $this->buildValueInfo($param->value);
+            + $this->buildValueInfo($param->getFormattedValue());
     }
 
     private function buildValueInfo(mixed $value): array

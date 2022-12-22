@@ -2,10 +2,11 @@
 
 namespace Api\Endpoint;
 
-use Api\EndpointParamSpecification\WantedImagePathSpecification;
-use Api\EndpointServiceFactory\OriginalImageHttpPathProviderFactory;
+use Api\EndpointParamSpecification\WantedReplicationSpecification;
+use Api\EndpointServiceFactory\InstanceIdProviderFactory;
+use Api\EndpointServiceFactory\ProvidedImageUrlProviderFactory;
 use Api\EndpointServiceFactory\S3ClientFactory;
-use Api\CombinedEndpointParamSpecification\WantedImageGeometrySpecification;
+use Api\EndpointServiceFactory\SupplierIdProviderFactory;
 use Api\EndpointSpecification\ReplicateImageWithResizingSpecification;
 use Domain\Action\ReplicateImageWithResizing;
 use DomainAdapter\OriginalImageProvider\OriginalImageHttpProvider;
@@ -16,11 +17,12 @@ use Framework\Endpoint\EndpointTemplate\EndpointServiceFactoryCollection;
 final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithResizingSpecification
 {
     public function __construct(
-        private readonly WantedImagePathSpecification $wantedImagePathSpecification,
-        private readonly WantedImageGeometrySpecification $wantedImageGeometrySpecification,
+        private readonly WantedReplicationSpecification $wantedReplicationSpecification,
 
         private readonly S3ClientFactory $s3ClientFactory,
-        private readonly OriginalImageHttpPathProviderFactory $originalImagePathProviderFactory,
+        private readonly ProvidedImageUrlProviderFactory $providedImageUrlProviderFactory,
+        private readonly InstanceIdProviderFactory $instanceIdProviderFactory,
+        private readonly SupplierIdProviderFactory $supplierIdProviderFactory,
 
         private readonly ReplicateImageWithResizing $action,
         private readonly OriginalImageHttpProvider $originalImageProvider,
@@ -31,8 +33,7 @@ final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithRes
     protected function buildExpectedInput(): ExpectedInput
     {
         return new ExpectedInput(
-            $this->wantedImagePathSpecification,
-            $this->wantedImageGeometrySpecification,
+            $this->wantedReplicationSpecification,
         );
     }
 
@@ -40,7 +41,9 @@ final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithRes
     {
         return new EndpointServiceFactoryCollection(
             $this->s3ClientFactory,
-            $this->originalImagePathProviderFactory,
+            $this->providedImageUrlProviderFactory,
+            $this->instanceIdProviderFactory,
+            $this->supplierIdProviderFactory,
         );
     }
 
@@ -48,8 +51,7 @@ final class ReplicateHttpImageWithResizingEndpoint extends ReplicateImageWithRes
     {
         $this->action->replicate(
             $this->originalImageProvider,
-            $input->getParamValue($this->wantedImagePathSpecification),
-            $input->getValueOfCombinedParams($this->wantedImageGeometrySpecification),
+            ...$input->getParamValue($this->wantedReplicationSpecification),
         );
     }
 }

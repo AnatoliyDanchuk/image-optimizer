@@ -33,11 +33,6 @@ use WeakMap;
 
 abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
 {
-    final protected function getHttpMethod(): string
-    {
-        return Request::METHOD_PUT;
-    }
-
     final public function getExpectedInput(): ExpectedInput
     {
         $endpointParams = $this->buildExpectedInput()->getEndpointParams();
@@ -103,8 +98,8 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
             throw new InvalidEndpointParamException($foundInputParam, $exception);
         }
         return new AppliedParam(
-            $foundInputParam->paramPath,
-            $paramSpecification->parseValue($foundInputParam->value),
+            $foundInputParam,
+            $paramSpecification,
         );
     }
 
@@ -182,7 +177,7 @@ abstract class ApplicationHttpEndpointTemplate extends HttpEndpointTemplate
         return $pathItems;
     }
 
-    private function getJsonParamValue(object $jsonItem, array $path): string
+    private function getJsonParamValue(object $jsonItem, array $path): string|array
     {
         foreach ($path as $key) {
             $jsonItem = $jsonItem->$key;

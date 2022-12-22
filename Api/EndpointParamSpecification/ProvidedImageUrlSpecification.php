@@ -9,12 +9,12 @@ use Framework\Endpoint\EndpointParamSpecification\HasRelatedErrorClass;
 use Framework\Endpoint\EndpointParamSpecification\RelatedErrorClasses;
 use Symfony\Component\Validator\Constraints;
 
-final class OriginalImageHttpPathSpecification extends EndpointParamSpecificationTemplate implements HasRelatedErrorClass
+final class ProvidedImageUrlSpecification extends EndpointParamSpecificationTemplate implements HasRelatedErrorClass
 {
     public function getAvailableParamPaths(): ParamPathCollection
     {
         return new ParamPathCollection(
-            new JsonBodyParamPath(['original_image', 'url']),
+            new JsonBodyParamPath(['provided_image', 'url']),
         );
     }
 
@@ -25,7 +25,7 @@ final class OriginalImageHttpPathSpecification extends EndpointParamSpecificatio
         ];
     }
 
-    public function parseValue(string $value): string
+    public function parseValue(string|array $value): string
     {
         return $value;
     }

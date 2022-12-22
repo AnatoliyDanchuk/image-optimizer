@@ -25,7 +25,7 @@ abstract class EndpointParamSpecificationTemplate
      */
     abstract protected function getParamConstraints(): array;
 
-    abstract public function parseValue(string $value);
+    abstract public function parseValue(string|array $value);
 
     final public function __toString(): string
     {

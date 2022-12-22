@@ -4,12 +4,12 @@ namespace DomainAdapter\OriginalImageProvider;
 
 use Domain\Image\Image;
 use Domain\OriginalImageProvider;
-use DomainAdapter\OriginalImagePathProvider\OriginalImageHttpPathProvider;
+use DomainAdapter\OriginalImagePathProvider\ProvidedImageUrlProvider;
 
 final class OriginalImageHttpProvider implements OriginalImageProvider
 {
     public function __construct(
-        private readonly OriginalImageHttpPathProvider $originalImageHttpPathProvider,
+        private readonly ProvidedImageUrlProvider $providedImageUrlProvider,
     )
     {
     }
@@ -17,7 +17,7 @@ final class OriginalImageHttpProvider implements OriginalImageProvider
     public function getOriginalImage(): Image
     {
         return new Image(
-            file_get_contents($this->originalImageHttpPathProvider->getOriginalImageHttpPath()),
+            file_get_contents($this->providedImageUrlProvider->getUrl()),
         );
     }
 }

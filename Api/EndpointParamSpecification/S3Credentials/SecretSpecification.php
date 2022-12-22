@@ -26,7 +26,7 @@ final class SecretSpecification extends EndpointParamSpecificationTemplate imple
         ];
     }
 
-    public function parseValue(string $value): string
+    public function parseValue(string|array $value): string
     {
         return $value;
     }

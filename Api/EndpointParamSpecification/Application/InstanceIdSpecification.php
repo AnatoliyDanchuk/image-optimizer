@@ -1,22 +1,20 @@
 <?php
 
-namespace Api\EndpointParamSpecification;
+namespace Api\EndpointParamSpecification\Application;
 
 use Framework\Endpoint\EndpointInput\JsonBodyParamPath;
 use Framework\Endpoint\EndpointInput\ParamPathCollection;
-use Framework\IntegratedService\S3\Exception\S3FileNotFound;
 use Framework\Endpoint\EndpointParamSpecification\EndpointParamSpecificationTemplate;
 use Framework\Endpoint\EndpointParamSpecification\HasRelatedErrorClass;
 use Framework\Endpoint\EndpointParamSpecification\RelatedErrorClasses;
-use Framework\IntegratedService\S3\Exception\S3ConnectionError;
 use Symfony\Component\Validator\Constraints;
 
-final class OriginalImageS3PathSpecification extends EndpointParamSpecificationTemplate implements HasRelatedErrorClass
+final class InstanceIdSpecification extends EndpointParamSpecificationTemplate implements HasRelatedErrorClass
 {
     public function getAvailableParamPaths(): ParamPathCollection
     {
         return new ParamPathCollection(
-            new JsonBodyParamPath(['original_image', 's3_path']),
+            new JsonBodyParamPath(['application', 'instance_id']),
         );
     }
 
@@ -27,7 +25,7 @@ final class OriginalImageS3PathSpecification extends EndpointParamSpecificationT
         ];
     }
 
-    public function parseValue(string $value): string
+    public function parseValue(string|array $value): string
     {
         return $value;
     }
@@ -35,8 +33,6 @@ final class OriginalImageS3PathSpecification extends EndpointParamSpecificationT
     public function getRelatedErrorClasses(): RelatedErrorClasses
     {
         return new RelatedErrorClasses(
-            S3ConnectionError::class,
-            S3FileNotFound::class,
         );
     }
 }
